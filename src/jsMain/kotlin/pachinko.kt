@@ -4,7 +4,7 @@ import kotlin.math.sin
 import kotlin.random.Random
 import kotlin.reflect.KClass
 
-data class Mass(var mass: Double) : Component
+data class Mass(var mass: Double, val force: Vector) : Component
 
 class PachinkoContext(
     dimContext: DimContext
@@ -14,9 +14,13 @@ class PachinkoContext(
 class PachinkoMovingSystem(
     private val width: Double,
     private val height: Double
-) : Component3System<Position, Velocity, Circle, EmptyContext>(Position::class, Velocity::class, Circle::class) {
-    override fun doProcessEntity(entity: Int, position: Position, velocity: Velocity, circle: Circle) {
+) : Component4System<Position, Velocity, Circle, Mass, EmptyContext>(
+    Position::class, Velocity::class, Circle::class,
+    Mass::class
+) {
+    override fun doProcessEntity(entity: Int, position: Position, velocity: Velocity, circle: Circle, mass: Mass) {
         val pins = world.groups["pins"]
+        if (velocity.v.lengthSq() < 0.5 && height - position.v.y - circle.radius <= 2) velocity.v.set(Vector.zero())
         val nextPosition = position.v + velocity.v
         var collision = false
         if ((nextPosition.x - circle.radius <= 0 && velocity.v.x < 0) ||
@@ -24,7 +28,7 @@ class PachinkoMovingSystem(
         ) {
             if (nextPosition.x - circle.radius < 0) nextPosition.x = circle.radius + 1
             else nextPosition.x = width - circle.radius - 1
-            velocity.v.x *= -0.9
+            velocity.v.x *= -0.8
             collision = true
         }
         if ((nextPosition.y - circle.radius <= 0 && velocity.v.y < 0) ||
@@ -32,25 +36,15 @@ class PachinkoMovingSystem(
         ) {
             if (nextPosition.y - circle.radius < 0) nextPosition.y = circle.radius + 1
             else nextPosition.y = height - circle.radius - 1
-            velocity.v.y *= -0.9
+            velocity.v.y *= -0.8
             collision = true
         }
-        if (collision && circle.radius > 5.0 && Random.nextDouble() < 0.1) {
-            val splitK = 0.8
-            val velK = 0.4
-            circle.radius *= splitK
-            val v1 = velocity.v.copy()
-            velocity.v *= velK
-            world.createBall(
-                nextPosition,
-                circle.radius * (1 - splitK),
-                (Vector.one() * (sqrt(v1.lengthSq() * (1 - splitK * velK * velK) / (1 - splitK))))
-                    .rot(Random.nextDouble(PI * 2)),
-                (world.component(entity, Mass::class)?.mass ?: 0.0) / 2
-            )
+        if (collision) {
+            velocity.v *= 0.9
+            mass.force += Vector(0.0, -9.8 * mass.mass)
         }
-        velocity.v *= 0.999
-        velocity.v += position.r.normalized() * 0.01
+        // velocity.v *= 0.999
+        //  velocity.v += position.r.normalized() * 0.01
         // Delay the position update so that other circles see a static picture of the world
         // during a frame.
         world.delay {
@@ -62,8 +56,15 @@ class PachinkoMovingSystem(
 @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
 class GravitySystem : Component2System<Velocity, Mass, EmptyContext>(Velocity::class, Mass::class) {
     override fun doProcessEntity(entity: Int, velocity: Velocity, mass: Mass) {
-        val a = Vector(0.0, 9.8 / mass.mass / 50)
-        velocity.v += a
+        mass.force += Vector(0.0, 9.8 * mass.mass)
+    }
+}
+
+@Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+class ForceApplicationSystem : Component2System<Velocity, Mass, EmptyContext>(Velocity::class, Mass::class) {
+    override fun doProcessEntity(entity: Int, velocity: Velocity, mass: Mass) {
+        velocity.v += mass.force / mass.mass / 50.0
+        mass.force.set(Vector.zero())
     }
 }
 
@@ -88,14 +89,18 @@ class PachinkoRenderSystem(
 
 @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
 class PachinkoDebugRenderSystem(private val ctx: CanvasRenderingContext2D) :
-    Component3System<Position, Circle, Velocity, DimContext>(Position::class, Circle::class, Velocity::class) {
-    override fun doProcessEntity(entity: Int, position: Position, circle: Circle, velocity: Velocity) {
+    Component4System<Position, Circle, Velocity, Mass, DimContext>(
+        Position::class, Circle::class, Velocity::class,
+        Mass::class
+    ) {
+    override fun doProcessEntity(entity: Int, position: Position, circle: Circle, velocity: Velocity, mass: Mass) {
         ctx.scale(world.globals.scale, world.globals.scale)
         val originalStroke = ctx.strokeStyle
         ctx.strokeStyle = "#ff2020"
         ctx.translate(position.v.x, position.v.y)
         drawVelocity(velocity)
         drawRotation(position, circle)
+        drawForce(mass)
         ctx.resetTransform()
         ctx.strokeStyle = originalStroke
     }
@@ -118,6 +123,14 @@ class PachinkoDebugRenderSystem(private val ctx: CanvasRenderingContext2D) :
         (velocity.v * 10.0).let { ctx.lineTo(it.x, it.y) }
         ctx.stroke()
     }
+
+    private fun drawForce(mass: Mass) {
+        ctx.beginPath()
+        ctx.moveTo(0.0, 0.0)
+        (mass.force * 10.0).let { ctx.lineTo(it.x, it.y) }
+        ctx.strokeStyle = "#2020ff"
+        ctx.stroke()
+    }
 }
 
 fun pachinkoWorld(context: DimContext) = World(object : RegisteredComponents {
@@ -126,7 +139,7 @@ fun pachinkoWorld(context: DimContext) = World(object : RegisteredComponents {
             Position::class to { Position(Vector.zero()) },
             Velocity::class to { Velocity(Vector.zero()) },
             Circle::class to { Circle(0.0) },
-            Mass::class to { Mass(0.0) }
+            Mass::class to { Mass(0.0, Vector.zero()) }
         )
 }, context)
 

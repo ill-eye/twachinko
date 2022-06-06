@@ -104,10 +104,11 @@ private fun initCirclesWorld() {
 }
 
 private fun initPachinkoWorld() {
-    pachinkoWorld.registerSystem(PachinkoMovingSystem(width.toDouble(), height.toDouble()))
     pachinkoWorld.registerSystem(GravitySystem())
-    pachinkoWorld.registerSystem(PachinkoRenderSystem(ctx))
+    pachinkoWorld.registerSystem(PachinkoMovingSystem(width.toDouble(), height.toDouble()))
     pachinkoWorld.registerSystem(PachinkoDebugRenderSystem(ctx))
+    pachinkoWorld.registerSystem(ForceApplicationSystem())
+    pachinkoWorld.registerSystem(PachinkoRenderSystem(ctx))
     for (i in (0..5)) {
         pachinkoWorld.createBall(
             position = Vector(
