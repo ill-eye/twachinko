@@ -57,7 +57,8 @@ private fun init2dKinematicWorld() {
     twoDKinematicWorld.registerSystem(TwoDKinematicSystem())
     twoDKinematicWorld.registerSystem(TwoDRenderSystem(ctx))
     twoDKinematicWorld.createParticle(Vector(0.0, 0.0)) { t -> Vector(t, t) }
-    twoDKinematicWorld.createParticle(Vector(0.0, 0.0)) { t -> Vector(t, t.pow(1.1)) }
+    twoDKinematicWorld.createParticle(Vector(0.0, 0.0)) { t -> Vector(t, t.pow(1.3)) }
+    twoDKinematicWorld.createParticle(Vector(0.0, 0.0)) { t -> Vector(t * 2, 300 + sin(t / 10) * 200) }
     twoDKinematicWorld.createParticle(Vector(0.0, 0.0)) { t ->
         Vector(
             100 + sin(t / 10) * 100,

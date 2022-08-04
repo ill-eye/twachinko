@@ -31,7 +31,7 @@ class TwoDRenderSystem(
 ) : Component2System<Position, TwoDKinematicCurve, TimeContext>(Position::class, TwoDKinematicCurve::class) {
     override fun before() {
         ctx.fillStyle = "#ffffff"
-        ctx.fillRect(0.0, 0.0, world.globals.width, world.globals.height)
+      //  ctx.fillRect(0.0, 0.0, world.globals.width, world.globals.height)
     }
 
     override fun doProcessEntity(entity: Int, position: Position, curve: TwoDKinematicCurve) {
