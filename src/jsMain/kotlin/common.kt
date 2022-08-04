@@ -61,7 +61,7 @@ data class Vector(var x: Double, var y: Double) {
     }
 }
 
-data class Position(val v: Vector, val r: Vector = Vector(1.0, 0.0)) : Component
+data class Position(val v: Vector, val r: Vector = Vector(1.0, 1.0)) : Component
 data class Velocity(val v: Vector) : Component
 
 open class DimContext(

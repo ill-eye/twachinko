@@ -5,6 +5,9 @@ import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.WebSocket
 import org.w3c.dom.events.MouseEvent
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
 import kotlin.random.Random
 
 val cvs = document.getElementById("cvs") as HTMLCanvasElement
@@ -15,6 +18,7 @@ const val height = 600
 val circlesWorld = circlesWorld(CirclesContext(DimContext(width.toDouble(), height.toDouble())))
 val fieldWorld = fieldWorld(DimContext(width.toDouble(), height.toDouble()))
 val pachinkoWorld = pachinkoWorld(DimContext(width.toDouble(), height.toDouble()))
+val twoDKinematicWorld = kinematicWorld(TimeContext(0.0, DimContext(width.toDouble(), height.toDouble())))
 
 fun getMousePos(canvas: HTMLCanvasElement, e: MouseEvent): Vector {
     val r = canvas.getBoundingClientRect()
@@ -45,8 +49,21 @@ fun main() {
     val scale = 1
     cvs.width = width * scale
     cvs.height = height * scale
-    initPachinkoWorld()
+    init2dKinematicWorld()
     run()
+}
+
+private fun init2dKinematicWorld() {
+    twoDKinematicWorld.registerSystem(TwoDKinematicSystem())
+    twoDKinematicWorld.registerSystem(TwoDRenderSystem(ctx))
+    twoDKinematicWorld.createParticle(Vector(0.0, 0.0)) { t -> Vector(t, t) }
+    twoDKinematicWorld.createParticle(Vector(0.0, 0.0)) { t -> Vector(t, t.pow(1.1)) }
+    twoDKinematicWorld.createParticle(Vector(0.0, 0.0)) { t ->
+        Vector(
+            100 + sin(t / 10) * 100,
+            100 + cos(t / 10) * 100
+        )
+    }
 }
 
 private fun initFieldWorld() {
@@ -128,6 +145,6 @@ private fun initPachinkoWorld() {
 @JsName("run")
 fun run() {
     window.setInterval({
-        pachinkoWorld.tick()
+        twoDKinematicWorld.tick()
     }, 20)
 }
